@@ -20,6 +20,12 @@ export const createCrudService = (table, defaultOrder = 'created_at') => ({
     if (error) throw error;
     return data;
   },
+  async createMany(values) {
+    if (!values.length) return [];
+    const { data, error } = await supabase.from(table).insert(values).select();
+    if (error) throw error;
+    return data || [];
+  },
   async update(id, values) {
     const { data, error } = await supabase.from(table).update(values).eq('id', id).select().single();
     if (error) throw error;

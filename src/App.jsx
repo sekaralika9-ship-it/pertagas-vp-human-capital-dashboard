@@ -13,6 +13,7 @@ import DocumentCenterPage from './pages/DocumentCenterPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import NotFoundPage from './pages/NotFoundPage';
+import ImportDataPage from './pages/ImportDataPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/audit-readiness" element={<AuditReadinessPage />} />
           <Route path="/documents" element={<DocumentCenterPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/imports" element={<ImportDataPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
       </Route>
