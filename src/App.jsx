@@ -24,15 +24,15 @@ export default function App() {
         <Route element={<AppLayout />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/employees" element={<EmployeesPage />} />
+          <Route path="/tna" element={<TnaPage />} />
+          <Route path="/budget" element={<BudgetPage />} />
+          <Route path="/training" element={<TrainingPage />} />
+          <Route path="/competency" element={<CompetencyPage />} />
+          <Route path="/audit-readiness" element={<AuditReadinessPage />} />
+          <Route path="/documents" element={<DocumentCenterPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route element={<StaffRoute />}>
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/tna" element={<TnaPage />} />
-            <Route path="/budget" element={<BudgetPage />} />
-            <Route path="/training" element={<TrainingPage />} />
-            <Route path="/competency" element={<CompetencyPage />} />
-            <Route path="/audit-readiness" element={<AuditReadinessPage />} />
-            <Route path="/documents" element={<DocumentCenterPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
             <Route path="/imports" element={<ImportDataPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

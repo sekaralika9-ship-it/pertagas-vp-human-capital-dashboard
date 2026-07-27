@@ -1,4 +1,5 @@
--- Aggregate-only access for regular dashboard viewers.
+-- Full read-only operational access for regular dashboard users.
+-- Original Excel workbooks are not stored by the application.
 -- Run this once in the Supabase SQL Editor after the base schema has been applied.
 
 do $$
@@ -16,15 +17,15 @@ begin
   ]
   loop
     execute format(
-      'drop policy if exists "authenticated read" on public.%I',
-      table_name
-    );
-    execute format(
       'drop policy if exists "staff read" on public.%I',
       table_name
     );
     execute format(
-      'create policy "staff read" on public.%I for select to authenticated using (public.current_user_role() in (''admin'', ''editor''))',
+      'drop policy if exists "authenticated read" on public.%I',
+      table_name
+    );
+    execute format(
+      'create policy "authenticated read" on public.%I for select to authenticated using (true)',
       table_name
     );
   end loop;
