@@ -1,5 +1,5 @@
 {
-  "name": "pertagas-hc-intelligence",
+  "name": "pertagas-hc-operation-dashboard",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -9,12 +9,23 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "vite": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "lucide-react": "latest",
-    "recharts": "latest"
+    "@hookform/resolvers": "^5.2.1",
+    "@supabase/supabase-js": "^2.53.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hook-form": "^7.62.0",
+    "react-router": "^8.3.0",
+    "recharts": "^3.1.0",
+    "sonner": "^2.0.7",
+    "vite": "^7.0.6",
+    "zod": "^4.0.14"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17"
+  }
 }

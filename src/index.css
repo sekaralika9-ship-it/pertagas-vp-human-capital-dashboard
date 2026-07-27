@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { @apply border-border; }
+  html { font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+  body { @apply m-0 bg-canvas text-ink antialiased; }
+  button, a, input, select, textarea { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brandBlue focus-visible:ring-offset-2; }
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-border bg-white shadow-card; }
+  .btn { @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-brandBlue text-white hover:bg-blue-700; }
+  .btn-secondary { @apply btn border border-border bg-white text-ink hover:bg-slate-50; }
+  .btn-danger { @apply btn bg-red-50 text-brandRed hover:bg-red-100; }
+  .icon-btn { @apply inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted hover:bg-slate-100 hover:text-ink; }
+  .field { @apply w-full rounded-xl border border-border bg-white px-3.5 py-2.5 text-sm text-ink placeholder:text-slate-400; }
+  .field-label { @apply mb-1.5 block text-sm font-semibold text-ink; }
+  .table-wrap { @apply overflow-x-auto rounded-2xl border border-border bg-white; }
+  .data-table { @apply min-w-full border-collapse text-left text-sm; }
+  .data-table th { @apply sticky top-0 whitespace-nowrap bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-muted; }
+  .data-table td { @apply whitespace-nowrap border-t border-border px-4 py-3.5 text-slate-700; }
+}
