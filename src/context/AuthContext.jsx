@@ -45,7 +45,15 @@ export function AuthProvider({ children }) {
     canDelete: profile?.role === 'admin',
     refreshProfile: () => loadProfile(session?.user),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),
-    signUp: (email, password, metadata) => supabase.auth.signUp({ email, password, options: { data: metadata } }),
+    signUp: async (email, password, metadata) => {
+      const registration = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: metadata },
+      });
+      if (registration.error || registration.data.session) return registration;
+      return supabase.auth.signInWithPassword({ email, password });
+    },
     resetPassword: (email) => supabase.auth.resetPasswordForEmail(email),
     signOut: () => supabase.auth.signOut(),
   }), [session, profile, loading, loadProfile]);
