@@ -26,10 +26,15 @@ export default function LoginPage() {
         toast.success('If an account exists, a reset email has been sent.');
         setMode('login');
       } else if (mode === 'register') {
-        const { error } = await auth.signUp(form.email, form.password, { full_name: form.full_name, function: form.function, role: 'viewer' });
+        const { data, error } = await auth.signUp(form.email, form.password, { full_name: form.full_name, function: form.function, role: 'viewer' });
         if (error) throw error;
-        toast.success('Registration successful. Check your email to confirm your account.');
-        setMode('login');
+        if (data.session) {
+          toast.success('Account created. You are now signed in.');
+          navigate('/dashboard', { replace: true });
+        } else {
+          toast.success('Account created. Confirm your email before signing in.');
+          setMode('login');
+        }
       } else {
         const { error } = await auth.signIn(form.email, form.password);
         if (error) throw error;
@@ -37,7 +42,15 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('Authentication failed', error);
-      toast.error('Authentication failed. Check your details and try again.');
+      if (error?.message?.toLowerCase().includes('email not confirmed')) {
+        toast.error('This account is waiting for email confirmation.');
+      } else if (error?.message?.toLowerCase().includes('invalid login credentials')) {
+        toast.error('No active account matches that email and password. Register first or reset your password.');
+      } else if (error?.message?.toLowerCase().includes('already registered')) {
+        toast.error('This email is already registered. Sign in or reset the password.');
+      } else {
+        toast.error('Authentication failed. Check your details and try again.');
+      }
     } finally { setBusy(false); }
   };
   return (
