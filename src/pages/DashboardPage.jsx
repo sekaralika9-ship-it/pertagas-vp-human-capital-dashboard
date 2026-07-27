@@ -14,8 +14,15 @@ import QuickActions from '../components/dashboard/QuickActions';
 import { formatPercent } from '../lib/formatters';
 import { useDashboardData } from '../hooks/useDashboardData';
 import { useAuth } from '../hooks/useAuth';
+import ViewerDashboardPage from './ViewerDashboardPage';
 
 export default function DashboardPage() {
+  const { role } = useAuth();
+  if (role === 'viewer') return <ViewerDashboardPage />;
+  return <StaffDashboardPage />;
+}
+
+function StaffDashboardPage() {
   const { profile } = useAuth();
   const { data, loading, error, refresh } = useDashboardData();
   const initialYear = data?.settings?.default_dashboard_year || new Date().getFullYear();
