@@ -101,15 +101,21 @@ const parseCatalog = async (mainFile) => {
 };
 
 const parseTraining = async (mainFile, realizationFile) => {
-  if (!realizationFile) return [];
+  if (!realizationFile) return { records: [], warnings: [] };
   const catalog = await parseCatalog(mainFile);
   const events = new Map();
+  let missingActualDates = 0;
+  let invalidPlanDates = 0;
   const participantRows = await readSheet(realizationFile, 'Pretes & Post Test');
   objectsFrom(participantRows, 1).forEach((row) => {
     const title = text(row['Training Name']);
     const start = isoDate(row['Start Date']);
     const end = isoDate(row['End Date']) || start;
-    if (!title || !start) return;
+    if (!title) return;
+    if (!start) {
+      missingActualDates += 1;
+      return;
+    }
     const key = `${normal(title)}|${start}|${end}`;
     const item = events.get(key) || {
       training_title: title,
@@ -137,6 +143,10 @@ const parseTraining = async (mainFile, realizationFile) => {
     const start = isoDate(row['Star Date']);
     const end = isoDate(row['End Date']) || start;
     if (!title || !start) return;
+    if (end < start) {
+      invalidPlanDates += 1;
+      return;
+    }
     const key = `${normal(title)}|${start}|${end}`;
     const status = trainingStatus(row.Proses);
     const cost = amount(row['Biaya HC']) + amount(row['Biaya Fungsi']);
@@ -167,10 +177,16 @@ const parseTraining = async (mainFile, realizationFile) => {
     events.set(key, item);
   });
 
-  return [...events.values()].map(({ _participants, ...item }) => ({
-    ...item,
-    participant_count: Math.max(item.participant_count || 0, _participants.size),
-  }));
+  const warnings = [];
+  if (missingActualDates) warnings.push(`${missingActualDates} participant realization row was skipped because its training date is missing.`);
+  if (invalidPlanDates) warnings.push(`${invalidPlanDates} planned training rows were skipped because their end dates are earlier than their start dates in the source workbook.`);
+  return {
+    records: [...events.values()].map(({ _participants, ...item }) => ({
+      ...item,
+      participant_count: Math.max(item.participant_count || 0, _participants.size),
+    })),
+    warnings,
+  };
 };
 
 const parseTna = async (idpFile) => {
@@ -242,7 +258,7 @@ export async function parsePertagasWorkbooks(files) {
   const idpFile = findFile(files, 'ReportIDP');
   const recognized = [mainFile, realizationFile, idpFile].filter(Boolean);
   if (!recognized.length) throw new Error('None of the selected workbooks match the supported Pertagas formats.');
-  const [employees, training, tna, budgets] = await Promise.all([
+  const [employees, trainingResult, tna, budgets] = await Promise.all([
     parseEmployees(mainFile, realizationFile),
     parseTraining(mainFile, realizationFile),
     parseTna(idpFile),
@@ -250,9 +266,10 @@ export async function parsePertagasWorkbooks(files) {
   ]);
   return {
     employees,
-    training,
+    training: trainingResult.records,
     tna,
     budgets,
+    warnings: trainingResult.warnings,
     recognized: recognized.map((file) => file.name),
     ignored: files.filter((file) => !recognized.includes(file)).map((file) => file.name),
   };

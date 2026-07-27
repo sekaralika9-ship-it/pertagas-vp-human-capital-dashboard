@@ -28,11 +28,28 @@ async function insertNew(service, incoming, getKey, userId) {
   const existingKeys = new Set(existing.map(getKey));
   const unique = incoming.filter((row) => !existingKeys.has(getKey(row)));
   let inserted = 0;
+  let failed = 0;
+  const insertGroup = async (group) => {
+    try {
+      const result = await service.createMany(group.map((row) => ({ ...row, created_by: userId })));
+      inserted += result.length;
+    } catch (error) {
+      const permissionFailure = error?.code === '42501' || /permission|row-level security/i.test(error?.message || '');
+      if (permissionFailure) throw error;
+      if (group.length === 1) {
+        console.error('Skipped an invalid import record', error);
+        failed += 1;
+        return;
+      }
+      const middle = Math.ceil(group.length / 2);
+      await insertGroup(group.slice(0, middle));
+      await insertGroup(group.slice(middle));
+    }
+  };
   for (const group of chunk(unique)) {
-    const result = await service.createMany(group.map((row) => ({ ...row, created_by: userId })));
-    inserted += result.length;
+    await insertGroup(group);
   }
-  return { inserted, skipped: incoming.length - unique.length };
+  return { inserted, skipped: incoming.length - unique.length, failed };
 }
 
 export default function ImportDataPage() {
@@ -117,10 +134,11 @@ export default function ImportDataPage() {
             <div><p className="font-semibold text-ink">Reference-only files</p><ul className="mt-2 space-y-1 text-muted">{preview.ignored.length ? preview.ignored.map((name) => <li key={name}>• {name}</li>) : <li>None</li>}</ul></div>
           </div>
           <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">Import creates current employees, aggregated training events, grouped IDP/TNA requirements and the annual training-budget summary. Audit and competency coverage remain empty because the supplied files do not contain reliable audit scores or competency target levels.</p>
+          {preview.warnings?.length > 0 && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Source-data checks</p><ul className="mt-2 space-y-1">{preview.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul></div>}
           <button className="btn-primary mt-5" disabled={importing} onClick={runImport}>{importing && <LoaderCircle className="animate-spin" size={17} />}{importing ? progress : 'Import approved data'}</button>
         </section>
       )}
-      {result && <section className="card p-5 md:p-7"><h2 className="text-lg font-bold text-navy">Import complete</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(result).map(([name, values]) => <div key={name} className="rounded-xl bg-green-50 p-4 text-sm"><strong className="capitalize text-green-900">{name}</strong><p className="mt-2 text-green-800">{values.inserted} inserted · {values.skipped} duplicates skipped</p></div>)}</div></section>}
+      {result && <section className="card p-5 md:p-7"><h2 className="text-lg font-bold text-navy">Import complete</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(result).map(([name, values]) => <div key={name} className="rounded-xl bg-green-50 p-4 text-sm"><strong className="capitalize text-green-900">{name}</strong><p className="mt-2 text-green-800">{values.inserted} inserted · {values.skipped} duplicates skipped · {values.failed} invalid skipped</p></div>)}</div></section>}
       {!files.length && <div className="card"><EmptyState title="No workbooks selected" description="Choose the approved Excel files to prepare a secure import preview." /></div>}
     </>
   );
