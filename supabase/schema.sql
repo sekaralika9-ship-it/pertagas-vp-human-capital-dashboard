@@ -198,7 +198,9 @@ $$;
 create or replace function public.protect_profile_role()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if new.role is distinct from old.role and public.current_user_role() is distinct from 'admin' then
+  if auth.uid() is not null
+    and new.role is distinct from old.role
+    and public.current_user_role() is distinct from 'admin' then
     raise exception 'Only administrators may change roles';
   end if;
   return new;
