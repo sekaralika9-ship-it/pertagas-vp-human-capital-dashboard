@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { calculateRemainingBudget } from '../../lib/calculations';
 
 const fieldSchema = (field) => {
+  if (field.type === 'boolean') return z.union([z.boolean(), z.enum(['true', 'false'])]);
   if (field.type === 'number') {
     let schema = z.coerce.number({ error: 'Enter a valid number' });
     if (field.min !== undefined) schema = schema.min(field.min, `Minimum is ${field.min}`);
@@ -36,6 +37,9 @@ export default function RecordForm({ fields, record, busy, onCancel, onSubmit })
     const payload = { ...values };
     fields.filter((field) => field.type === 'number').forEach((field) => {
       if (payload[field.name] === '') payload[field.name] = null;
+    });
+    fields.filter((field) => field.type === 'boolean').forEach((field) => {
+      payload[field.name] = payload[field.name] === true || payload[field.name] === 'true';
     });
     onSubmit(payload);
   };

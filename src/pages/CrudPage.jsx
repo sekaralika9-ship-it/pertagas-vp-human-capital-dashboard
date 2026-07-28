@@ -18,7 +18,7 @@ import { employeeService } from '../services/employeeService';
 
 const PAGE_SIZE = 10;
 
-export default function CrudPage({ config }) {
+export default function CrudPage({ config, insight }) {
   const { user, canWrite, canDelete } = useAuth();
   const { records, loading, error, refresh } = useRecords(config.service);
   const [query, setQuery] = useState('');
@@ -79,6 +79,7 @@ export default function CrudPage({ config }) {
   return (
     <>
       <PageHeader title={config.title} description={config.description} action={addButton} />
+      {insight}
       <FilterBar>
         <SearchInput value={query} onChange={(value) => { setQuery(value); setPage(1); }} />
         <button className="btn-secondary sm:ml-auto" onClick={refresh}><RefreshCw size={16} />Refresh</button>

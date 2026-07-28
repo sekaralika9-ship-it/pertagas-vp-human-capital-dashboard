@@ -11,6 +11,7 @@ begin
     'tna_records',
     'budget_records',
     'training_records',
+    'training_participations',
     'competency_records',
     'audit_readiness_records',
     'documents'

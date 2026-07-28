@@ -10,6 +10,7 @@ import { employeeService } from '../services/employeeService';
 import { trainingService } from '../services/trainingService';
 import { tnaService } from '../services/tnaService';
 import { budgetService } from '../services/budgetService';
+import { trainingParticipationService } from '../services/trainingParticipationService';
 
 const chunk = (items, size = 100) => {
   const groups = [];
@@ -18,9 +19,10 @@ const chunk = (items, size = 100) => {
 };
 const key = {
   employees: (row) => String(row.employee_number),
-  training: (row) => `${row.training_title}|${row.start_date}|${row.end_date}`.toLowerCase(),
-  tna: (row) => `${row.year}|${row.function}|${row.department}|${row.competency_category}|${row.proposed_training}`.toLowerCase(),
-  budgets: (row) => `${row.year}|${row.budget_category}|${row.programme_name}`.toLowerCase(),
+  training: (row) => `${row.training_title}|${row.start_date}|${row.end_date}`.toLowerCase().replace(/\s+/g, ' ').trim(),
+  tna: (row) => `${row.year}|${row.function}|${row.department}|${row.competency_category}|${row.proposed_training}`.toLowerCase().replace(/\s+/g, ' ').trim(),
+  budgets: (row) => `${row.year}|${row.budget_category}|${row.programme_name}`.toLowerCase().replace(/\s+/g, ' ').trim(),
+  participations: (row) => `${row.employee_id}|${row.training_id}`,
 };
 
 async function insertNew(service, incoming, getKey, userId) {
@@ -50,6 +52,27 @@ async function insertNew(service, incoming, getKey, userId) {
     await insertGroup(group);
   }
   return { inserted, skipped: incoming.length - unique.length, failed };
+}
+
+async function syncExisting(service, incoming, getKey, userId) {
+  const existing = await service.getAll();
+  const existingByKey = new Map(existing.map((row) => [getKey(row), row]));
+  const result = await insertNew(service, incoming, getKey, userId);
+  let updated = 0;
+  const matched = incoming.filter((row) => existingByKey.has(getKey(row)));
+  for (const group of chunk(matched, 20)) {
+    await Promise.all(group.map(async (row) => {
+      const current = existingByKey.get(getKey(row));
+      try {
+        await service.update(current.id, row);
+        updated += 1;
+      } catch (error) {
+        console.error('Unable to refresh an existing imported record', error);
+        result.failed += 1;
+      }
+    }));
+  }
+  return { ...result, updated, skipped: Math.max(0, result.skipped - updated) };
 }
 
 export default function ImportDataPage() {
@@ -84,11 +107,39 @@ export default function ImportDataPage() {
       setProgress('Importing employees…');
       summary.employees = await insertNew(employeeService, preview.employees, key.employees, user.id);
       setProgress('Importing training records…');
-      summary.training = await insertNew(trainingService, preview.training, key.training, user.id);
+      summary.training = await syncExisting(trainingService, preview.training, key.training, user.id);
       setProgress('Importing TNA records…');
-      summary.tna = await insertNew(tnaService, preview.tna, key.tna, user.id);
+      summary.tna = await syncExisting(tnaService, preview.tna, key.tna, user.id);
       setProgress('Importing budget records…');
-      summary.budgets = await insertNew(budgetService, preview.budgets, key.budgets, user.id);
+      summary.budgets = await syncExisting(budgetService, preview.budgets, key.budgets, user.id);
+      setProgress('Linking employee training history…');
+      const [employees, training] = await Promise.all([
+        employeeService.getAll(),
+        trainingService.getAll(),
+      ]);
+      const employeesByNumber = new Map(employees.map((row) => [String(row.employee_number), row.id]));
+      const trainingByKey = new Map(training.map((row) => [key.training(row), row.id]));
+      const seenParticipation = new Set();
+      const participationRows = preview.participations.flatMap((row) => {
+        const employeeId = employeesByNumber.get(String(row.employee_number));
+        const trainingId = trainingByKey.get(row.training_key);
+        const participationKey = `${employeeId}|${trainingId}`;
+        if (!employeeId || !trainingId || seenParticipation.has(participationKey)) return [];
+        seenParticipation.add(participationKey);
+        return [{
+          employee_id: employeeId,
+          training_id: trainingId,
+          pre_test_score: row.pre_test_score,
+          post_test_score: row.post_test_score,
+          result: row.result,
+        }];
+      });
+      summary.participations = await syncExisting(
+        trainingParticipationService,
+        participationRows,
+        key.participations,
+        user.id,
+      );
       setResult(summary);
       toast.success('Import completed successfully.');
     } catch (error) {
@@ -103,6 +154,7 @@ export default function ImportDataPage() {
   const counts = preview ? [
     ['Employees', preview.employees.length],
     ['Training records', preview.training.length],
+    ['Employee participation', preview.participations.length],
     ['TNA records', preview.tna.length],
     ['Budget records', preview.budgets.length],
   ] : [];
@@ -128,17 +180,17 @@ export default function ImportDataPage() {
       {preview && (
         <section className="card p-5 md:p-7">
           <h2 className="text-lg font-bold text-navy">Import preview</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">{counts.map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-slate-50 p-4"><p className="text-xs font-medium text-muted">{label}</p><p className="mt-2 text-2xl font-bold text-navy">{value}</p></div>)}</div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{counts.map(([label, value]) => <div key={label} className="rounded-xl border border-border bg-slate-50 p-4"><p className="text-xs font-medium text-muted">{label}</p><p className="mt-2 text-2xl font-bold text-navy">{value}</p></div>)}</div>
           <div className="mt-5 grid gap-4 text-sm md:grid-cols-2">
             <div><p className="font-semibold text-ink">Recognised workbooks</p><ul className="mt-2 space-y-1 text-muted">{preview.recognized.map((name) => <li key={name}>• {name}</li>)}</ul></div>
             <div><p className="font-semibold text-ink">Reference-only files</p><ul className="mt-2 space-y-1 text-muted">{preview.ignored.length ? preview.ignored.map((name) => <li key={name}>• {name}</li>) : <li>None</li>}</ul></div>
           </div>
-          <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">Import creates current employees, aggregated training events, grouped IDP/TNA requirements and the annual training-budget summary. Audit and competency coverage remain empty because the supplied files do not contain reliable audit scores or competency target levels.</p>
+          <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-800">Import creates current employees, employee-level training history, training events linked to TNA, grouped IDP/TNA requirements, and training-spend ownership by function. Audit and competency coverage remain empty because the supplied files do not contain reliable audit scores or competency target levels.</p>
           {preview.warnings?.length > 0 && <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"><p className="font-semibold">Source-data checks</p><ul className="mt-2 space-y-1">{preview.warnings.map((warning) => <li key={warning}>• {warning}</li>)}</ul></div>}
           <button className="btn-primary mt-5" disabled={importing} onClick={runImport}>{importing && <LoaderCircle className="animate-spin" size={17} />}{importing ? progress : 'Import approved data'}</button>
         </section>
       )}
-      {result && <section className="card p-5 md:p-7"><h2 className="text-lg font-bold text-navy">Import complete</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{Object.entries(result).map(([name, values]) => <div key={name} className="rounded-xl bg-green-50 p-4 text-sm"><strong className="capitalize text-green-900">{name}</strong><p className="mt-2 text-green-800">{values.inserted} inserted · {values.skipped} duplicates skipped · {values.failed} invalid skipped</p></div>)}</div></section>}
+      {result && <section className="card p-5 md:p-7"><h2 className="text-lg font-bold text-navy">Import complete</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">{Object.entries(result).map(([name, values]) => <div key={name} className="rounded-xl bg-green-50 p-4 text-sm"><strong className="capitalize text-green-900">{name}</strong><p className="mt-2 text-green-800">{values.inserted} inserted{values.updated ? ` · ${values.updated} refreshed` : ''} · {values.skipped} duplicates skipped · {values.failed} invalid skipped</p></div>)}</div></section>}
       {!files.length && <div className="card"><EmptyState title="No workbooks selected" description="Choose the approved Excel files to prepare a secure import preview." /></div>}
     </>
   );

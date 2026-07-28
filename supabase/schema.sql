@@ -90,6 +90,10 @@ create table public.training_records (
   participant_count integer not null check (participant_count >= 0),
   planned_cost numeric(18,2) check (planned_cost >= 0),
   actual_cost numeric(18,2) check (actual_cost >= 0),
+  owner_function text not null default 'Unspecified',
+  hc_cost numeric(18,2) not null default 0 check (hc_cost >= 0),
+  function_cost numeric(18,2) not null default 0 check (function_cost >= 0),
+  tna_based boolean not null default false,
   status text not null check (status in ('planned','approved','ongoing','completed','cancelled')),
   completion_percentage integer not null default 0 check (completion_percentage between 0 and 100),
   certificate_link text,
@@ -98,6 +102,19 @@ create table public.training_records (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint valid_training_dates check (end_date >= start_date)
+);
+
+create table public.training_participations (
+  id uuid primary key default gen_random_uuid(),
+  employee_id uuid not null references public.employees(id) on delete cascade,
+  training_id uuid not null references public.training_records(id) on delete cascade,
+  pre_test_score numeric(5,2) check (pre_test_score between 0 and 100),
+  post_test_score numeric(5,2) check (post_test_score between 0 and 100),
+  result text,
+  created_by uuid not null references public.profiles(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (employee_id, training_id)
 );
 
 create table public.competency_records (
@@ -161,6 +178,9 @@ create index employees_function_idx on public.employees(function);
 create index tna_year_function_idx on public.tna_records(year, function);
 create index budget_year_idx on public.budget_records(year);
 create index training_start_status_idx on public.training_records(start_date, status);
+create index training_owner_tna_idx on public.training_records(owner_function, tna_based, status);
+create index training_participations_employee_idx on public.training_participations(employee_id);
+create index training_participations_training_idx on public.training_participations(training_id);
 create index competency_employee_idx on public.competency_records(employee_id);
 create index audit_function_status_idx on public.audit_readiness_records(function, readiness_status);
 create index documents_status_created_idx on public.documents(status, created_at desc);
@@ -176,6 +196,7 @@ create trigger employees_updated_at before update on public.employees for each r
 create trigger tna_updated_at before update on public.tna_records for each row execute function public.set_updated_at();
 create trigger budget_updated_at before update on public.budget_records for each row execute function public.set_updated_at();
 create trigger training_updated_at before update on public.training_records for each row execute function public.set_updated_at();
+create trigger training_participations_updated_at before update on public.training_participations for each row execute function public.set_updated_at();
 create trigger competency_updated_at before update on public.competency_records for each row execute function public.set_updated_at();
 create trigger audit_updated_at before update on public.audit_readiness_records for each row execute function public.set_updated_at();
 create trigger documents_updated_at before update on public.documents for each row execute function public.set_updated_at();
@@ -215,6 +236,7 @@ alter table public.employees enable row level security;
 alter table public.tna_records enable row level security;
 alter table public.budget_records enable row level security;
 alter table public.training_records enable row level security;
+alter table public.training_participations enable row level security;
 alter table public.competency_records enable row level security;
 alter table public.audit_readiness_records enable row level security;
 alter table public.documents enable row level security;
@@ -232,7 +254,7 @@ create policy "settings update admin" on public.app_settings for update to authe
 do $$
 declare table_name text;
 begin
-  foreach table_name in array array['employees','tna_records','budget_records','training_records','competency_records','audit_readiness_records','documents']
+  foreach table_name in array array['employees','tna_records','budget_records','training_records','training_participations','competency_records','audit_readiness_records','documents']
   loop
     execute format('create policy "authenticated read" on public.%I for select to authenticated using (true)', table_name);
     execute format('create policy "admin editor insert" on public.%I for insert to authenticated with check (public.current_user_role() in (''admin'',''editor'') and created_by = auth.uid())', table_name);
