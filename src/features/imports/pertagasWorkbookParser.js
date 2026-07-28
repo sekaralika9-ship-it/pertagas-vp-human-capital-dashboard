@@ -403,13 +403,23 @@ export async function parsePertagasWorkbooks(files) {
     parseTna(idpFile, realizationFile),
     parseBudget(realizationFile),
   ]);
+  const warnings = [...trainingResult.warnings];
+  const detailedUsed = trainingResult.records
+    .filter((record) => record.status === 'completed')
+    .reduce((total, record) => total + Number(record.actual_cost || 0), 0);
+  const recapUsed = Number(budgets[0]?.used_amount || 0);
+  if (detailedUsed && recapUsed && Math.abs(detailedUsed - recapUsed) >= 1) {
+    warnings.push(
+      `Detailed completed-training costs differ from the Rekap Prognosa used-budget total by IDR ${Math.abs(detailedUsed - recapUsed).toLocaleString('id-ID')}. Verify the source workbooks before financial reporting.`,
+    );
+  }
   return {
     employees,
     training: trainingResult.records,
     participations: trainingResult.participations,
     tna,
     budgets,
-    warnings: trainingResult.warnings,
+    warnings,
     recognized: recognized.map((file) => file.name),
     ignored: files.filter((file) => !recognized.includes(file)).map((file) => file.name),
   };
