@@ -28,7 +28,7 @@ export default function Header({ onMenu }) {
           </button>
           {open && (
             <div className="card absolute right-0 mt-2 w-52 p-2">
-              <div className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted">{profile?.role || 'viewer'}</div>
+              <div className="border-b border-border px-3 py-2 text-xs font-medium uppercase tracking-wide text-muted">{profile?.role === 'viewer' ? 'member' : profile?.role || 'member'}</div>
               <button className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-brandRed hover:bg-red-50" onClick={signOut}><LogOut size={16} />Logout</button>
             </div>
           )}

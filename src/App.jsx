@@ -34,8 +34,8 @@ export default function App() {
           <Route path="/audit-readiness" element={<AuditReadinessPage />} />
           <Route path="/documents" element={<DocumentCenterPage />} />
           <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/imports" element={<ImportDataPage />} />
           <Route element={<StaffRoute />}>
-            <Route path="/imports" element={<ImportDataPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
         </Route>

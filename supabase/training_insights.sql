@@ -37,23 +37,24 @@ alter table public.training_participations enable row level security;
 drop policy if exists "authenticated read" on public.training_participations;
 drop policy if exists "admin editor insert" on public.training_participations;
 drop policy if exists "admin editor update" on public.training_participations;
+drop policy if exists "authenticated insert" on public.training_participations;
+drop policy if exists "authenticated update" on public.training_participations;
 drop policy if exists "admin delete" on public.training_participations;
 
 create policy "authenticated read"
 on public.training_participations for select to authenticated
 using (true);
 
-create policy "admin editor insert"
+create policy "authenticated insert"
 on public.training_participations for insert to authenticated
 with check (
-  public.current_user_role() in ('admin', 'editor')
-  and created_by = auth.uid()
+  created_by = auth.uid()
 );
 
-create policy "admin editor update"
+create policy "authenticated update"
 on public.training_participations for update to authenticated
-using (public.current_user_role() in ('admin', 'editor'))
-with check (public.current_user_role() in ('admin', 'editor'));
+using (true)
+with check (true);
 
 create policy "admin delete"
 on public.training_participations for delete to authenticated

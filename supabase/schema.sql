@@ -257,8 +257,8 @@ begin
   foreach table_name in array array['employees','tna_records','budget_records','training_records','training_participations','competency_records','audit_readiness_records','documents']
   loop
     execute format('create policy "authenticated read" on public.%I for select to authenticated using (true)', table_name);
-    execute format('create policy "admin editor insert" on public.%I for insert to authenticated with check (public.current_user_role() in (''admin'',''editor'') and created_by = auth.uid())', table_name);
-    execute format('create policy "admin editor update" on public.%I for update to authenticated using (public.current_user_role() in (''admin'',''editor'')) with check (public.current_user_role() in (''admin'',''editor''))', table_name);
+    execute format('create policy "authenticated insert" on public.%I for insert to authenticated with check (created_by = auth.uid())', table_name);
+    execute format('create policy "authenticated update" on public.%I for update to authenticated using (true) with check (true)', table_name);
     execute format('create policy "admin delete" on public.%I for delete to authenticated using (public.current_user_role() = ''admin'')', table_name);
   end loop;
 end $$;

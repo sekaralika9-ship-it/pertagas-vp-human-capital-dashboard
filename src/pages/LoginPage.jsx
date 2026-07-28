@@ -60,7 +60,7 @@ export default function LoginPage() {
           <div className="mb-8 lg:hidden"><BrandLogo /></div>
           {mode !== 'login' && <button className="mb-5 inline-flex items-center gap-2 text-sm font-medium text-muted" onClick={() => setMode('login')}><ArrowLeft size={16} />Back to sign in</button>}
           <h2 className="text-3xl font-bold tracking-tight text-navy">{mode === 'register' ? 'Create your account' : mode === 'forgot' ? 'Reset your password' : 'Welcome back'}</h2>
-          <p className="mt-2 text-sm leading-6 text-muted">{mode === 'register' ? 'New accounts begin with viewer access.' : mode === 'forgot' ? 'We will send password recovery instructions to your email.' : 'Sign in with your organisation email and password.'}</p>
+          <p className="mt-2 text-sm leading-6 text-muted">{mode === 'register' ? 'New accounts begin with member access and can maintain operational data.' : mode === 'forgot' ? 'We will send password recovery instructions to your email.' : 'Sign in with your organisation email and password.'}</p>
           {!auth.configured && <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Supabase environment variables are missing. See <code>.env.example</code>.</div>}
           <form className="mt-7 space-y-4" onSubmit={submit}>
             {mode === 'register' && <><label><span className="field-label">Full Name *</span><input className="field" name="full_name" value={form.full_name} onChange={change} required /></label><label><span className="field-label">Function *</span><input className="field" name="function" value={form.function} onChange={change} required /></label></>}

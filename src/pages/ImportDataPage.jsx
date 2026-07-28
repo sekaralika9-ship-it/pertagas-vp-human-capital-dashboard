@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { FileCheck2, FileSpreadsheet, LoaderCircle, ShieldCheck, Upload } from 'lucide-react';
-import { Navigate } from 'react-router';
 import { toast } from 'sonner';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
@@ -76,15 +75,13 @@ async function syncExisting(service, incoming, getKey, userId) {
 }
 
 export default function ImportDataPage() {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [preview, setPreview] = useState(null);
   const [processing, setProcessing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [progress, setProgress] = useState('');
   const [result, setResult] = useState(null);
-  if (role !== 'admin') return <Navigate to="/dashboard" replace />;
-
   const analyse = async () => {
     if (!files.length) return toast.error('Select the Pertagas Excel workbooks first.');
     setProcessing(true);

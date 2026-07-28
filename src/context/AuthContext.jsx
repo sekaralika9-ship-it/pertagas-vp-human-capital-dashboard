@@ -41,7 +41,7 @@ export function AuthProvider({ children }) {
     loading,
     configured: isSupabaseConfigured,
     role: profile?.role || 'viewer',
-    canWrite: ['admin', 'editor'].includes(profile?.role),
+    canWrite: Boolean(session?.user),
     canDelete: profile?.role === 'admin',
     refreshProfile: () => loadProfile(session?.user),
     signIn: (email, password) => supabase.auth.signInWithPassword({ email, password }),

@@ -17,7 +17,7 @@ export const navigation = [
   { label: 'Audit Readiness', path: '/audit-readiness', icon: ClipboardCheck },
   { label: 'Document Center', path: '/documents', icon: FolderOpen },
   { label: 'Reports', path: '/reports', icon: BarChart3 },
-  { label: 'Excel Import', path: '/imports', icon: FileSpreadsheet, adminOnly: true },
+  { label: 'Excel Import', path: '/imports', icon: FileSpreadsheet },
   { label: 'Settings', path: '/settings', icon: Settings, adminOnly: true },
 ];
 
