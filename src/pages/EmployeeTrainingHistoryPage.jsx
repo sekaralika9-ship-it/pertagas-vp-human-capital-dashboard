@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { GraduationCap, Search, Users } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Search, Users } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router';
 import PageHeader from '../components/common/PageHeader';
 import LoadingState from '../components/common/LoadingState';
 import ErrorState from '../components/common/ErrorState';
@@ -8,6 +9,9 @@ import { trainingParticipationService } from '../services/trainingParticipationS
 import { formatDate, humanize } from '../lib/formatters';
 
 export default function EmployeeTrainingHistoryPage() {
+  const [searchParams] = useSearchParams();
+  const selectedEmployeeId = searchParams.get('employee') || '';
+  const selectedEmployeeName = searchParams.get('name') || '';
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -28,13 +32,20 @@ export default function EmployeeTrainingHistoryPage() {
 
   useEffect(load, []);
 
+  const scopedRecords = useMemo(
+    () => selectedEmployeeId
+      ? records.filter((record) => record.employees?.id === selectedEmployeeId)
+      : records,
+    [records, selectedEmployeeId],
+  );
+
   const functions = useMemo(() => [...new Set(
-    records.map((record) => record.employees?.function).filter(Boolean),
-  )].sort(), [records]);
+    scopedRecords.map((record) => record.employees?.function).filter(Boolean),
+  )].sort(), [scopedRecords]);
 
   const filtered = useMemo(() => {
     const term = query.trim().toLowerCase();
-    return records.filter((record) => {
+    return scopedRecords.filter((record) => {
       const employee = record.employees || {};
       const training = record.training_records || {};
       const matchesTerm = !term || [
@@ -46,16 +57,19 @@ export default function EmployeeTrainingHistoryPage() {
       ].some((value) => String(value || '').toLowerCase().includes(term));
       return matchesTerm && (!functionFilter || employee.function === functionFilter);
     });
-  }, [records, query, functionFilter]);
+  }, [scopedRecords, query, functionFilter]);
 
-  const trainedWorkers = new Set(records.map((record) => record.employees?.id).filter(Boolean)).size;
-  const trainingTypes = new Set(records.map((record) => record.training_records?.category).filter(Boolean)).size;
+  const trainedWorkers = new Set(scopedRecords.map((record) => record.employees?.id).filter(Boolean)).size;
+  const trainingTypes = new Set(scopedRecords.map((record) => record.training_records?.category).filter(Boolean)).size;
 
   return (
     <>
       <PageHeader
-        title="Employee Training History"
-        description="Review the training types and programmes previously attended by each employee."
+        title={selectedEmployeeName ? `${selectedEmployeeName}'s Training History` : 'Employee Training History'}
+        description={selectedEmployeeName
+          ? 'Training programmes and types recorded for this employee.'
+          : 'Review the training types and programmes previously attended by each employee.'}
+        action={selectedEmployeeId ? <Link className="btn-secondary" to="/employees"><ArrowLeft size={16} />Back to Employees</Link> : null}
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <Stat icon={Users} label="Workers with history" value={trainedWorkers} />
@@ -82,7 +96,9 @@ export default function EmployeeTrainingHistoryPage() {
           {!filtered.length ? (
             <EmptyState
               title="No training history available"
-              description={records.length ? 'No records match the selected filters.' : 'Re-import the realization workbook to link employees with completed training.'}
+              description={selectedEmployeeName
+                ? `No completed training is recorded for ${selectedEmployeeName}.`
+                : records.length ? 'No records match the selected filters.' : 'Re-import the realization workbook to link employees with completed training.'}
             />
           ) : (
             <table className="data-table">

@@ -28,7 +28,7 @@ export const employeeConfig = {
     date('join_date', 'Join Date'), { name: 'location', label: 'Location' }, notes,
   ],
   columns: [
-    { key: 'employee_number', label: 'Employee No.' }, { key: 'full_name', label: 'Full Name' },
+    { key: 'employee_number', label: 'Employee No.' }, { key: 'full_name', label: 'Full Name', kind: 'employee-training-link' },
     { key: 'function', label: 'Function' }, { key: 'department', label: 'Department' },
     { key: 'position', label: 'Position' }, { key: 'employment_status', label: 'Status', kind: 'status' },
   ],
