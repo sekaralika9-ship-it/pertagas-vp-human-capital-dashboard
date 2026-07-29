@@ -16,6 +16,7 @@ import NotFoundPage from './pages/NotFoundPage';
 import ImportDataPage from './pages/ImportDataPage';
 import StaffRoute from './routes/StaffRoute';
 import EmployeeTrainingHistoryPage from './pages/EmployeeTrainingHistoryPage';
+import VendorsPage from './pages/VendorsPage';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/tna" element={<TnaPage />} />
           <Route path="/budget" element={<BudgetPage />} />
           <Route path="/training" element={<TrainingPage />} />
+          <Route path="/vendors" element={<VendorsPage />} />
           <Route path="/competency" element={<CompetencyPage />} />
           <Route path="/audit-readiness" element={<AuditReadinessPage />} />
           <Route path="/documents" element={<DocumentCenterPage />} />

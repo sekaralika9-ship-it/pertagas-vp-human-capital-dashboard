@@ -1,5 +1,5 @@
 import {
-  BarChart3, BookOpenCheck, ClipboardCheck, FileSpreadsheet, FolderOpen, GraduationCap, History,
+  BarChart3, BookOpenCheck, Building2, ClipboardCheck, FileSpreadsheet, FolderOpen, GraduationCap, History,
   LayoutDashboard, LogOut, Settings, Target, Users, WalletCards,
 } from 'lucide-react';
 import { NavLink } from 'react-router';
@@ -13,6 +13,7 @@ export const navigation = [
   { label: 'TNA', path: '/tna', icon: Target },
   { label: 'Budget', path: '/budget', icon: WalletCards },
   { label: 'Training Realization', path: '/training', icon: GraduationCap },
+  { label: 'Vendors', path: '/vendors', icon: Building2 },
   { label: 'Competency', path: '/competency', icon: BookOpenCheck },
   { label: 'Audit Readiness', path: '/audit-readiness', icon: ClipboardCheck },
   { label: 'Document Center', path: '/documents', icon: FolderOpen },
