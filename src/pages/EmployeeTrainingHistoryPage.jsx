@@ -101,7 +101,17 @@ export default function EmployeeTrainingHistoryPage() {
                 : records.length ? 'No records match the selected filters.' : 'Re-import the realization workbook to link employees with completed training.'}
             />
           ) : (
-            <table className="data-table">
+            <table className="data-table min-w-[1100px] table-fixed">
+              <colgroup>
+                <col className="w-[9%]" />
+                <col className="w-[13%]" />
+                <col className="w-[18%]" />
+                <col className="w-[25%]" />
+                <col className="w-[12%]" />
+                <col className="w-[9%]" />
+                <col className="w-[8%]" />
+                <col className="w-[6%]" />
+              </colgroup>
               <thead>
                 <tr><th>Employee No.</th><th>Employee</th><th>Function</th><th>Training</th><th>Type</th><th>Date</th><th>Method</th><th>Result</th></tr>
               </thead>
@@ -111,14 +121,17 @@ export default function EmployeeTrainingHistoryPage() {
                   const training = record.training_records || {};
                   return (
                     <tr key={record.id}>
-                      <td>{employee.employee_number}</td>
-                      <td><strong className="text-ink">{employee.full_name}</strong><span className="mt-1 block text-xs text-muted">{employee.position}</span></td>
-                      <td>{employee.function}</td>
-                      <td className="max-w-sm whitespace-normal font-medium text-ink">{training.training_title}</td>
-                      <td>{training.category}</td>
-                      <td>{formatDate(training.start_date)}</td>
-                      <td>{humanize(training.training_method || '')}</td>
-                      <td>{record.result || 'Completed'}</td>
+                      <td className="!whitespace-normal break-words align-top">{employee.employee_number}</td>
+                      <td className="!whitespace-normal break-words align-top">
+                        <strong className="text-ink">{employee.full_name}</strong>
+                        {employee.position && <span className="mt-1 block text-xs leading-5 text-muted">{employee.position}</span>}
+                      </td>
+                      <td className="!whitespace-normal break-words align-top leading-5">{employee.function}</td>
+                      <td className="!whitespace-normal break-words align-top font-medium leading-5 text-ink">{training.training_title}</td>
+                      <td className="!whitespace-normal break-words align-top leading-5">{training.category}</td>
+                      <td className="align-top">{formatDate(training.start_date)}</td>
+                      <td className="align-top">{humanize(training.training_method || '')}</td>
+                      <td className="align-top"><ResultPill value={record.result || 'Completed'} /></td>
                     </tr>
                   );
                 })}
@@ -128,6 +141,20 @@ export default function EmployeeTrainingHistoryPage() {
         </div>
       )}
     </>
+  );
+}
+
+function ResultPill({ value }) {
+  const normalized = String(value).trim().toLowerCase();
+  const tone = ['passed', 'pass', 'completed'].includes(normalized)
+    ? 'bg-green-50 text-green-700'
+    : ['failed', 'fail'].includes(normalized)
+      ? 'bg-red-50 text-red-700'
+      : 'bg-slate-100 text-slate-700';
+  return (
+    <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>
+      {humanize(normalized)}
+    </span>
   );
 }
 

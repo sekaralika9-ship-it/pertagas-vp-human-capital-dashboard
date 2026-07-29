@@ -94,6 +94,61 @@ export default function ReportsPage() {
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
 
+    const functionNames = new Set([
+      ...data.employees.map((item) => item.function),
+      ...data.tna.map((item) => item.function),
+      ...data.audits.map((item) => item.function),
+      ...data.training.map((item) => item.owner_function),
+    ].filter((name) => name && (!fn || name === fn)));
+    const initialTrainingByFunctionGroups = Object.fromEntries(
+      [...functionNames].map((name) => [name, {
+        name,
+        total: 0,
+        ongoing: 0,
+        completed: 0,
+      }]),
+    );
+    const trainingByFunctionGroups = filtered.training.reduce((groups, item) => {
+      if (item.status === 'cancelled') return groups;
+      const name = item.owner_function || 'Unspecified';
+      if (!groups[name]) {
+        groups[name] = {
+          name,
+          total: 0,
+          ongoing: 0,
+          completed: 0,
+        };
+      }
+      groups[name].total += 1;
+      if (item.status === 'ongoing') groups[name].ongoing += 1;
+      if (item.status === 'completed') groups[name].completed += 1;
+      return groups;
+    }, initialTrainingByFunctionGroups);
+    const trainingByFunction = Object.values(trainingByFunctionGroups)
+      .map((item) => {
+        const realized = item.ongoing + item.completed;
+        return {
+          ...item,
+          realized,
+          remaining: item.total - realized,
+          realizationRate: item.total ? (realized / item.total) * 100 : 0,
+        };
+      })
+      .sort((a, b) => b.realized - a.realized || a.name.localeCompare(b.name));
+    const trainingRealizationTotal = trainingByFunction.reduce((totals, item) => ({
+      total: totals.total + item.total,
+      ongoing: totals.ongoing + item.ongoing,
+      completed: totals.completed + item.completed,
+      realized: totals.realized + item.realized,
+      remaining: totals.remaining + item.remaining,
+    }), {
+      total: 0,
+      ongoing: 0,
+      completed: 0,
+      realized: 0,
+      remaining: 0,
+    });
+
     return {
       rows,
       activeEmployees,
@@ -105,6 +160,13 @@ export default function ReportsPage() {
       tnaStatus,
       workforce,
       spend,
+      trainingByFunction,
+      trainingRealizationTotal: {
+        ...trainingRealizationTotal,
+        realizationRate: trainingRealizationTotal.total
+          ? (trainingRealizationTotal.realized / trainingRealizationTotal.total) * 100
+          : 0,
+      },
     };
   }, [filtered]);
 
@@ -113,6 +175,7 @@ export default function ReportsPage() {
 
   const functions = [...new Set([
     ...data.employees.map((item) => item.function),
+    ...data.tna.map((item) => item.function),
     ...data.audits.map((item) => item.function),
     ...data.training.map((item) => item.owner_function),
   ].filter(Boolean))].sort();
@@ -128,6 +191,18 @@ export default function ReportsPage() {
       { key: 'total', label: 'Total Records' },
       { key: 'summary', label: 'Summary' },
     ])) toast.error('There is no visible data to export.');
+  };
+
+  const exportTrainingRealization = () => {
+    if (!exportCsv('training-realization-by-function.csv', report.trainingByFunction, [
+      { key: 'name', label: 'Function' },
+      { key: 'total', label: 'Total Programmes' },
+      { key: 'ongoing', label: 'Ongoing' },
+      { key: 'completed', label: 'Completed' },
+      { key: 'realized', label: 'Already Run' },
+      { key: 'remaining', label: 'Not Yet Run' },
+      { key: 'realizationRate', label: 'Realization (%)' },
+    ])) toast.error('There is no training realization data to export.');
   };
 
   return (
@@ -249,6 +324,74 @@ export default function ReportsPage() {
       </div>
 
       <section className="card overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-5 md:p-6">
+          <div className="flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-green-50 text-green-700"><GraduationCap size={19} /></div>
+            <div>
+              <h2 className="font-bold text-navy">Training Realization by Function</h2>
+              <p className="mt-0.5 text-xs text-muted">Programmes already run include ongoing and completed training; cancelled programmes are excluded.</p>
+            </div>
+          </div>
+          <button className="btn-secondary print:hidden" onClick={exportTrainingRealization}>
+            <Download size={16} />Export Training Realization
+          </button>
+        </div>
+        {!report.trainingByFunction.length ? (
+          <EmptyState title="No training realization data" description="No training programmes match the selected filters." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Function</th>
+                  <th>Total Programmes</th>
+                  <th>Ongoing</th>
+                  <th>Completed</th>
+                  <th>Already Run</th>
+                  <th>Not Yet Run</th>
+                  <th>Realization</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.trainingByFunction.map((item) => (
+                  <tr key={item.name}>
+                    <td className="font-semibold text-ink">{item.name}</td>
+                    <td>{item.total}</td>
+                    <td><CountPill value={item.ongoing} tone="blue" /></td>
+                    <td><CountPill value={item.completed} tone="green" /></td>
+                    <td className="font-semibold text-navy">{item.realized}</td>
+                    <td>{item.remaining}</td>
+                    <td>
+                      <div className="flex min-w-36 items-center gap-3">
+                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full bg-brandGreen"
+                            style={{ width: `${Math.min(100, item.realizationRate)}%` }}
+                          />
+                        </div>
+                        <span className="w-10 text-right text-xs font-semibold text-navy">{formatPercent(item.realizationRate)}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 font-semibold text-navy">
+                  <td className="px-4 py-3.5">Total</td>
+                  <td className="px-4 py-3.5">{report.trainingRealizationTotal.total}</td>
+                  <td className="px-4 py-3.5">{report.trainingRealizationTotal.ongoing}</td>
+                  <td className="px-4 py-3.5">{report.trainingRealizationTotal.completed}</td>
+                  <td className="px-4 py-3.5">{report.trainingRealizationTotal.realized}</td>
+                  <td className="px-4 py-3.5">{report.trainingRealizationTotal.remaining}</td>
+                  <td className="px-4 py-3.5">{formatPercent(report.trainingRealizationTotal.realizationRate)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="card overflow-hidden">
         <div className="flex items-center gap-3 border-b border-border p-5 md:p-6">
           <div className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-brandBlue"><BarChart3 size={19} /></div>
           <div><h2 className="font-bold text-navy">Detailed Module Snapshot</h2><p className="mt-0.5 text-xs text-muted">Supporting totals behind the infographic</p></div>
@@ -266,6 +409,14 @@ export default function ReportsPage() {
       </section>
     </>
   );
+}
+
+function CountPill({ value, tone }) {
+  const tones = {
+    blue: 'bg-sky-50 text-sky-700',
+    green: 'bg-emerald-50 text-emerald-700',
+  };
+  return <span className={`inline-flex min-w-9 justify-center rounded-full px-2.5 py-1 text-xs font-bold ${tones[tone]}`}>{value}</span>;
 }
 
 function InfographicCard({ icon: Icon, label, value, caption, tone = 'blue' }) {
