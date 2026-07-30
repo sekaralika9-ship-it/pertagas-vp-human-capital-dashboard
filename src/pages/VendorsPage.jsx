@@ -3,12 +3,16 @@ import {
   Building2, CalendarDays, Download, GraduationCap, Plus, Search, Users, WalletCards, X,
 } from 'lucide-react';
 import { Link } from 'react-router';
+import {
+  Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts';
 import { toast } from 'sonner';
 import PageHeader from '../components/common/PageHeader';
 import EmptyState from '../components/common/EmptyState';
 import ErrorState from '../components/common/ErrorState';
 import LoadingState from '../components/common/LoadingState';
 import StatusBadge from '../components/common/StatusBadge';
+import ChartShell from '../components/dashboard/ChartShell';
 import { trainingService } from '../services/trainingService';
 import { exportCsv, formatCurrency, formatDate, humanize } from '../lib/formatters';
 import { useAuth } from '../hooks/useAuth';
@@ -33,6 +37,8 @@ function buildVendors(records) {
       trainingCount: 0,
       completedCount: 0,
       ongoingCount: 0,
+      pendingCount: 0,
+      cancelledCount: 0,
       participants: 0,
       spend: 0,
       lastUsed: '',
@@ -44,7 +50,9 @@ function buildVendors(records) {
     group.categoryCounts.set(category, (group.categoryCounts.get(category) || 0) + 1);
     group.trainingCount += 1;
     if (record.status === 'completed') group.completedCount += 1;
-    if (record.status === 'ongoing') group.ongoingCount += 1;
+    else if (record.status === 'ongoing') group.ongoingCount += 1;
+    else if (record.status === 'cancelled') group.cancelledCount += 1;
+    else group.pendingCount += 1;
     group.participants += Number(record.participant_count || 0);
     group.spend += Number(record.actual_cost || 0);
     if (record.start_date && (!group.lastUsed || record.start_date > group.lastUsed)) group.lastUsed = record.start_date;
@@ -112,6 +120,12 @@ export default function VendorsPage() {
     participants: vendors.reduce((total, vendor) => total + vendor.participants, 0),
     spend: vendors.reduce((total, vendor) => total + vendor.spend, 0),
   }), [vendors]);
+  const vendorRealization = useMemo(
+    () => vendors
+      .filter((vendor) => vendor.completedCount || vendor.ongoingCount || vendor.pendingCount)
+      .slice(0, 10),
+    [vendors],
+  );
 
   const exportVendors = () => {
     const exported = exportCsv('vendor-directory.csv', filtered.map((vendor) => ({
@@ -156,6 +170,27 @@ export default function VendorsPage() {
         <Stat icon={Users} label="Recorded participants" value={summary.participants} tone="navy" />
         <Stat icon={WalletCards} label="Actual vendor spend" value={formatCurrency(summary.spend)} tone="amber" />
       </div>
+
+      <ChartShell
+        title="Vendor Training Realization"
+        subtitle="Completed, ongoing, and planned programmes by provider"
+        empty={!vendorRealization.length}
+      >
+        <div style={{ height: Math.max(300, vendorRealization.length * 42) }}>
+          <ResponsiveContainer>
+            <BarChart data={vendorRealization} layout="vertical" margin={{ left: 35, right: 20 }}>
+              <CartesianGrid stroke="#E5EAF2" horizontal={false} />
+              <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} />
+              <YAxis type="category" dataKey="name" width={155} axisLine={false} tickLine={false} fontSize={11} />
+              <Tooltip />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="completedCount" name="Completed" stackId="vendor" fill="#79BE28" />
+              <Bar dataKey="ongoingCount" name="Ongoing" stackId="vendor" fill="#38BDF8" />
+              <Bar dataKey="pendingCount" name="Planned" stackId="vendor" fill="#F59E0B" radius={[0, 7, 7, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </ChartShell>
 
       <section className="card overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row">

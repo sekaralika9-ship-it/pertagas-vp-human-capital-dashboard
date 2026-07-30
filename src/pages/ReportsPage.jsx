@@ -3,7 +3,7 @@ import {
   BarChart3, CheckCircle2, Download, GraduationCap, Printer, Target, TrendingUp, Users, WalletCards,
 } from 'lucide-react';
 import {
-  Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { toast } from 'sonner';
 import PageHeader from '../components/common/PageHeader';
@@ -12,16 +12,7 @@ import ErrorState from '../components/common/ErrorState';
 import EmptyState from '../components/common/EmptyState';
 import ChartShell from '../components/dashboard/ChartShell';
 import { useDashboardData } from '../hooks/useDashboardData';
-import { exportCsv, formatCurrency, formatPercent, humanize } from '../lib/formatters';
-
-const statusColors = {
-  completed: '#79BE28',
-  approved: '#155EEF',
-  in_progress: '#38BDF8',
-  proposed: '#F59E0B',
-  draft: '#94A3B8',
-  cancelled: '#E31E24',
-};
+import { exportCsv, formatCurrency, formatPercent } from '../lib/formatters';
 
 export default function ReportsPage() {
   const { data, loading, error, refresh } = useDashboardData();
@@ -69,10 +60,17 @@ export default function ReportsPage() {
     ];
 
     const tnaGroups = filtered.tna.reduce((groups, item) => {
-      groups[item.status] = (groups[item.status] || 0) + 1;
+      if (item.status === 'cancelled') return groups;
+      const name = item.function || 'Unspecified';
+      if (!groups[name]) groups[name] = { name, completed: 0, inProgress: 0, pending: 0 };
+      if (item.status === 'completed') groups[name].completed += 1;
+      else if (item.status === 'in_progress') groups[name].inProgress += 1;
+      else groups[name].pending += 1;
       return groups;
     }, {});
-    const tnaStatus = Object.entries(tnaGroups).map(([name, value]) => ({ name, value }));
+    const tnaByFunction = Object.values(tnaGroups)
+      .map((item) => ({ ...item, total: item.completed + item.inProgress + item.pending }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
 
     const employeeGroups = filtered.employees.reduce((groups, item) => {
       const name = item.function || 'Unspecified';
@@ -157,7 +155,7 @@ export default function ReportsPage() {
       tnaRate: filtered.tna.length ? (completedTna / filtered.tna.length) * 100 : 0,
       budgetRate: allocated ? (used / allocated) * 100 : 0,
       used,
-      tnaStatus,
+      tnaByFunction,
       workforce,
       spend,
       trainingByFunction,
@@ -280,27 +278,20 @@ export default function ReportsPage() {
           </ChartShell>
         </div>
         <div className="xl:col-span-2">
-          <ChartShell title="TNA Progress Mix" subtitle="Distribution of needs by current status" empty={!report.tnaStatus.length}>
-            <div className="relative h-56">
+          <ChartShell title="TNA Progress by Function" subtitle="Completed, in-progress, and pending needs" empty={!report.tnaByFunction.length}>
+            <div style={{ height: Math.max(288, report.tnaByFunction.length * 34) }}>
               <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={report.tnaStatus} dataKey="value" nameKey="name" innerRadius={62} outerRadius={88} paddingAngle={2}>
-                    {report.tnaStatus.map((item) => <Cell key={item.name} fill={statusColors[item.name] || '#94A3B8'} />)}
-                  </Pie>
-                  <Tooltip formatter={(value, name) => [value, humanize(name)]} />
-                </PieChart>
+                <BarChart data={report.tnaByFunction} layout="vertical" margin={{ left: 10, right: 10 }}>
+                  <CartesianGrid stroke="#E5EAF2" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} />
+                  <YAxis type="category" dataKey="name" width={115} axisLine={false} tickLine={false} fontSize={10} />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: 10 }} />
+                  <Bar dataKey="completed" name="Completed" stackId="tna" fill="#79BE28" />
+                  <Bar dataKey="inProgress" name="In Progress" stackId="tna" fill="#38BDF8" />
+                  <Bar dataKey="pending" name="Pending" stackId="tna" fill="#F59E0B" radius={[0, 7, 7, 0]} />
+                </BarChart>
               </ResponsiveContainer>
-              <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
-                <div><strong className="block text-2xl text-navy">{formatPercent(report.tnaRate)}</strong><span className="text-xs text-muted">completed</span></div>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {report.tnaStatus.map((item) => (
-                <span key={item.name} className="inline-flex items-center gap-1.5 text-xs text-muted">
-                  <i className="h-2 w-2 rounded-full" style={{ background: statusColors[item.name] || '#94A3B8' }} />
-                  {humanize(item.name)} ({item.value})
-                </span>
-              ))}
             </div>
           </ChartShell>
         </div>
@@ -339,8 +330,25 @@ export default function ReportsPage() {
         {!report.trainingByFunction.length ? (
           <EmptyState title="No training realization data" description="No training programmes match the selected filters." />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
+          <>
+            <div className="border-b border-border p-5 md:p-6">
+              <div style={{ height: Math.max(300, report.trainingByFunction.length * 42) }}>
+                <ResponsiveContainer>
+                  <BarChart data={report.trainingByFunction} layout="vertical" margin={{ left: 25, right: 20 }}>
+                    <CartesianGrid stroke="#E5EAF2" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} />
+                    <YAxis type="category" dataKey="name" width={145} axisLine={false} tickLine={false} fontSize={11} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar dataKey="completed" name="Completed" stackId="training" fill="#79BE28" />
+                    <Bar dataKey="ongoing" name="Ongoing" stackId="training" fill="#38BDF8" />
+                    <Bar dataKey="remaining" name="Not Yet Run" stackId="training" fill="#CBD5E1" radius={[0, 7, 7, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="data-table">
               <thead>
                 <tr>
                   <th>Function</th>
@@ -386,8 +394,9 @@ export default function ReportsPage() {
                   <td className="px-4 py-3.5">{formatPercent(report.trainingRealizationTotal.realizationRate)}</td>
                 </tr>
               </tfoot>
-            </table>
-          </div>
+              </table>
+            </div>
+          </>
         )}
       </section>
 

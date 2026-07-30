@@ -8,7 +8,9 @@ export default function Header({ onMenu }) {
   const [open, setOpen] = useState(false);
   const { pathname } = useLocation();
   const { profile, user, signOut } = useAuth();
-  const title = navigation.find((item) => pathname.startsWith(item.path))?.label || 'HC Operation Dashboard';
+  const title = [...navigation]
+    .sort((left, right) => right.path.length - left.path.length)
+    .find((item) => pathname.startsWith(item.path))?.label || 'HC Operation Dashboard';
   const name = profile?.full_name || user?.email || 'User';
   const initials = name.split(/\s+/).slice(0, 2).map((word) => word[0]).join('').toUpperCase();
   return (
