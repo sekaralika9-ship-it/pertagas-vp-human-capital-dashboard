@@ -7,6 +7,7 @@ import { budgetService } from '../services/budgetService';
 import { tnaService } from '../services/tnaService';
 import { documentService } from '../services/documentService';
 import { settingsService } from '../services/settingsService';
+import { trainingParticipationService } from '../services/trainingParticipationService';
 import { calculateDashboardMetrics } from '../lib/calculations';
 
 export function useDashboardData() {
@@ -14,12 +15,13 @@ export function useDashboardData() {
   const refresh = useCallback(async () => {
     setState((value) => ({ ...value, loading: true, error: false }));
     try {
-      const [employees, training, audits, competencies, budgets, tna, documents, settings] = await Promise.all([
+      const [employees, training, audits, competencies, budgets, tna, documents, settings, participations] = await Promise.all([
         employeeService.getAll(), trainingService.getAll(), auditService.getAll(), competencyService.getAll(),
         budgetService.getAll(), tnaService.getAll(), documentService.getAll(), settingsService.get(),
+        trainingParticipationService.getAll(),
       ]);
       setState({ loading: false, error: false, data: {
-        employees, training, audits, competencies, budgets, tna, documents, settings,
+        employees, training, audits, competencies, budgets, tna, documents, settings, participations,
         metrics: calculateDashboardMetrics({ employees, training, audits, competencies, budgets }),
       } });
     } catch (error) {
